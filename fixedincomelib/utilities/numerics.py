@@ -108,21 +108,45 @@ class Interpolator1DPCP(Interpolator1D):
         assert self.extrap_method_ == ExtrapMethod.FLAT
 
     def interpolate(self, x: float) -> float:
-        #TODO
-        pass
+        index = np.searchsorted(self.axis1_, x, side = "left")
+        index = min(index, self.length_ - 1)
+        return self.values_[index]
 
     def integrate(self, start_x: float, end_x: float) -> float:
-        #TODO
-        pass
+        if start_x == end_x:
+            return 0.0
+        if start_x > end_x:
+            return -self.integrate(end_x, start_x)
+        internal_points = self.axis1_[(self.axis1_ > start_x) & (self.axis1_ < end_x)]
+        points = np.concatenate(([start_x], internal_points, [end_x],))
+        integral = 0.0
+        for left, right in zip(points[:-1], points[1:]):
+            midpoint = (left + right) / 2
+            value = self.interpolate(midpoint)
+            integral += (right - left) * value
+        return integral
 
     def gradient_wrt_ordinate(self, x: float) -> np.ndarray:
-        #TODO
-        pass
+        index = np.searchsorted(self.axis1_, x, side = "left")
+        index = min(index, self.length_ - 1)
+        grad = np.zeros(self.length_)
+        grad[index] = 1.0
+        return grad
 
     def gradient_of_integrated_value_wrt_ordinate(self, start_x: float, end_x: float) -> np.ndarray:
-        #TODO
-        pass
-
+        grad = np.zeros(self.length_)
+        if start_x == end_x:
+            return grad
+        if start_x > end_x:
+            return -self.gradient_of_integrated_value_wrt_ordinate(end_x, start_x)
+        internal_points = self.axis1_[(self.axis1_ > start_x) & (self.axis1_ < end_x)]
+        points = np.concatenate(([start_x], internal_points, [end_x]))
+        for left, right in zip(points[:-1], points[1:]):
+            midpoint = (left + right) / 2
+            index = np.searchsorted(self.axis1_, midpoint, side = "left")
+            index = min(index, self.length_ - 1)
+            grad[index] += right - left
+        return grad
 
 class InterpolatorFactory:
 
